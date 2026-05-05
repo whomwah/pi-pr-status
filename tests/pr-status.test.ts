@@ -1,11 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { parseChecks, formatStatus } from "../extensions/pr-status";
+import { parsePrChecks, formatPrStatus } from "../extensions/pr-status";
 
-// ─── parseChecks ─────────────────────────────────────────────────────────────
+// ─── parsePrChecks ───────────────────────────────────────────────────────────
 
-describe("parseChecks", () => {
+describe("parsePrChecks", () => {
   it("returns zero-counts for empty input", () => {
-    expect(parseChecks([])).toEqual({
+    expect(parsePrChecks([])).toEqual({
       total: 0,
       pass: 0,
       fail: 0,
@@ -19,37 +19,37 @@ describe("parseChecks", () => {
       {},
       { name: "real", conclusion: "SUCCESS", status: "COMPLETED" },
     ];
-    const result = parseChecks(input);
+    const result = parsePrChecks(input);
     expect(result.total).toBe(1);
   });
 
   it("counts SUCCESS as pass", () => {
     expect(
-      parseChecks([{ name: "ci", conclusion: "SUCCESS", status: "COMPLETED" }]),
+      parsePrChecks([{ name: "ci", conclusion: "SUCCESS", status: "COMPLETED" }]),
     ).toMatchObject({ total: 1, pass: 1, fail: 0, pending: 0 });
   });
 
   it("counts NEUTRAL as pass", () => {
     expect(
-      parseChecks([{ name: "ci", conclusion: "NEUTRAL", status: "COMPLETED" }]),
+      parsePrChecks([{ name: "ci", conclusion: "NEUTRAL", status: "COMPLETED" }]),
     ).toMatchObject({ total: 1, pass: 1 });
   });
 
   it("counts SKIPPED as pass", () => {
     expect(
-      parseChecks([{ name: "ci", conclusion: "SKIPPED", status: "COMPLETED" }]),
+      parsePrChecks([{ name: "ci", conclusion: "SKIPPED", status: "COMPLETED" }]),
     ).toMatchObject({ total: 1, pass: 1 });
   });
 
   it("counts FAILURE as fail", () => {
     expect(
-      parseChecks([{ name: "ci", conclusion: "FAILURE", status: "COMPLETED" }]),
+      parsePrChecks([{ name: "ci", conclusion: "FAILURE", status: "COMPLETED" }]),
     ).toMatchObject({ total: 1, pass: 0, fail: 1 });
   });
 
   it("counts TIMED_OUT as fail", () => {
     expect(
-      parseChecks([
+      parsePrChecks([
         { name: "ci", conclusion: "TIMED_OUT", status: "COMPLETED" },
       ]),
     ).toMatchObject({ fail: 1 });
@@ -57,7 +57,7 @@ describe("parseChecks", () => {
 
   it("counts CANCELLED as fail", () => {
     expect(
-      parseChecks([
+      parsePrChecks([
         { name: "ci", conclusion: "CANCELLED", status: "COMPLETED" },
       ]),
     ).toMatchObject({ fail: 1 });
@@ -65,7 +65,7 @@ describe("parseChecks", () => {
 
   it("counts ACTION_REQUIRED as fail", () => {
     expect(
-      parseChecks([
+      parsePrChecks([
         { name: "ci", conclusion: "ACTION_REQUIRED", status: "COMPLETED" },
       ]),
     ).toMatchObject({ fail: 1 });
@@ -73,31 +73,31 @@ describe("parseChecks", () => {
 
   it("counts QUEUED as pending", () => {
     expect(
-      parseChecks([{ name: "ci", conclusion: "", status: "QUEUED" }]),
+      parsePrChecks([{ name: "ci", conclusion: "", status: "QUEUED" }]),
     ).toMatchObject({ total: 1, pending: 1 });
   });
 
   it("counts IN_PROGRESS as pending", () => {
     expect(
-      parseChecks([{ name: "ci", conclusion: "", status: "IN_PROGRESS" }]),
+      parsePrChecks([{ name: "ci", conclusion: "", status: "IN_PROGRESS" }]),
     ).toMatchObject({ total: 1, pending: 1 });
   });
 
   it("counts WAITING as pending", () => {
     expect(
-      parseChecks([{ name: "ci", conclusion: "", status: "WAITING" }]),
+      parsePrChecks([{ name: "ci", conclusion: "", status: "WAITING" }]),
     ).toMatchObject({ total: 1, pending: 1 });
   });
 
   it("counts COMPLETED (no conclusion) as pass", () => {
     expect(
-      parseChecks([{ name: "ci", conclusion: "", status: "COMPLETED" }]),
+      parsePrChecks([{ name: "ci", conclusion: "", status: "COMPLETED" }]),
     ).toMatchObject({ total: 1, pass: 1 });
   });
 
   it("treats unknown conclusion/status as pending", () => {
     expect(
-      parseChecks([{ name: "ci", conclusion: "WEIRD", status: "ODDBALL" }]),
+      parsePrChecks([{ name: "ci", conclusion: "WEIRD", status: "ODDBALL" }]),
     ).toMatchObject({ total: 1, pending: 1 });
   });
 
@@ -107,7 +107,7 @@ describe("parseChecks", () => {
       { name: "test", conclusion: "FAILURE", status: "COMPLETED" },
       { name: "deploy", conclusion: "", status: "IN_PROGRESS" },
     ];
-    const result = parseChecks(input);
+    const result = parsePrChecks(input);
     expect(result).toEqual({
       total: 3,
       pass: 1,
@@ -121,14 +121,14 @@ describe("parseChecks", () => {
       { name: "a", conclusion: "success", status: "completed" },
       { name: "b", conclusion: "failure", status: "completed" },
     ];
-    const result = parseChecks(input);
+    const result = parsePrChecks(input);
     expect(result).toEqual({ total: 2, pass: 1, fail: 1, pending: 0 });
   });
 });
 
-// ─── formatStatus ────────────────────────────────────────────────────────────
+// ─── formatPrStatus ──────────────────────────────────────────────────────────
 
-describe("formatStatus", () => {
+describe("formatPrStatus", () => {
   it("shows green dot for OPEN pr", () => {
     const pr = {
       number: 42,
@@ -138,7 +138,7 @@ describe("formatStatus", () => {
       checks: { total: 0, pass: 0, fail: 0, pending: 0 },
       unresolvedThreads: 0,
     };
-    expect(formatStatus(pr)).toContain("🟢");
+    expect(formatPrStatus(pr)).toContain("🟢");
   });
 
   it("shows purple dot for MERGED pr", () => {
@@ -150,7 +150,7 @@ describe("formatStatus", () => {
       checks: { total: 0, pass: 0, fail: 0, pending: 0 },
       unresolvedThreads: 0,
     };
-    expect(formatStatus(pr)).toContain("🟣");
+    expect(formatPrStatus(pr)).toContain("🟣");
   });
 
   it("shows red dot for CLOSED pr", () => {
@@ -162,7 +162,7 @@ describe("formatStatus", () => {
       checks: { total: 0, pass: 0, fail: 0, pending: 0 },
       unresolvedThreads: 0,
     };
-    expect(formatStatus(pr)).toContain("🔴");
+    expect(formatPrStatus(pr)).toContain("🔴");
   });
 
   it("includes linked PR number with OSC 8 hyperlink", () => {
@@ -174,7 +174,7 @@ describe("formatStatus", () => {
       checks: { total: 0, pass: 0, fail: 0, pending: 0 },
       unresolvedThreads: 0,
     };
-    const output = formatStatus(pr);
+    const output = formatPrStatus(pr);
     expect(output).toContain("PR #99");
     // OSC 8 uses ESC ]8;; and ESC \\ terminators
     const esc = String.fromCharCode(27);
@@ -192,7 +192,7 @@ describe("formatStatus", () => {
       checks: { total: 3, pass: 3, fail: 0, pending: 0 },
       unresolvedThreads: 0,
     };
-    expect(formatStatus(pr)).toContain("✅");
+    expect(formatPrStatus(pr)).toContain("✅");
   });
 
   it("shows fail count and ❌ when any check fails", () => {
@@ -204,7 +204,7 @@ describe("formatStatus", () => {
       checks: { total: 3, pass: 1, fail: 2, pending: 0 },
       unresolvedThreads: 0,
     };
-    const output = formatStatus(pr);
+    const output = formatPrStatus(pr);
     expect(output).toContain("❌");
     expect(output).toContain("2 fail");
   });
@@ -218,7 +218,7 @@ describe("formatStatus", () => {
       checks: { total: 2, pass: 0, fail: 0, pending: 2 },
       unresolvedThreads: 0,
     };
-    expect(formatStatus(pr)).toContain("⏳");
+    expect(formatPrStatus(pr)).toContain("⏳");
   });
 
   it("shows unresolved thread count", () => {
@@ -230,7 +230,7 @@ describe("formatStatus", () => {
       checks: { total: 0, pass: 0, fail: 0, pending: 0 },
       unresolvedThreads: 3,
     };
-    const output = formatStatus(pr);
+    const output = formatPrStatus(pr);
     expect(output).toContain("💬");
     expect(output).toContain("3");
   });
@@ -244,7 +244,7 @@ describe("formatStatus", () => {
       checks: { total: 2, pass: 2, fail: 0, pending: 0 },
       unresolvedThreads: 1,
     };
-    const output = formatStatus(pr);
+    const output = formatPrStatus(pr);
     expect(output).toContain("🟢");
     expect(output).toContain("✅");
     expect(output).toContain("💬 1");

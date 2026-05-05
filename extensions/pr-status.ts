@@ -68,7 +68,7 @@ async function getBranch(
 }
 
 /** Parse CI check statuses from gh pr view JSON. */
-export function parseChecks(statusCheckRollup: unknown[]): CheckStatus {
+export function parsePrChecks(statusCheckRollup: unknown[]): CheckStatus {
   const checks: CheckStatus = { total: 0, pass: 0, fail: 0, pending: 0 };
 
   for (const check of statusCheckRollup) {
@@ -158,7 +158,7 @@ async function getPrForBranch(
     if (!pr.number || !pr.url) return undefined;
 
     const checks = Array.isArray(pr.statusCheckRollup)
-      ? parseChecks(pr.statusCheckRollup)
+      ? parsePrChecks(pr.statusCheckRollup)
       : { total: 0, pass: 0, fail: 0, pending: 0 };
 
     // Extract owner/name from PR URL: https://github.com/owner/name/pull/N
@@ -187,7 +187,7 @@ async function getPrForBranch(
 }
 
 /** Format a PR into a compact status string with OSC 8 hyperlink. */
-export function formatStatus(pr: PrInfo): string {
+export function formatPrStatus(pr: PrInfo): string {
   const stateIcon =
     pr.state === "MERGED" ? "🟣" : pr.state === "CLOSED" ? "🔴" : "🟢";
 
@@ -250,7 +250,7 @@ export default async function (pi: ExtensionAPI) {
     const pr = await getPrForBranch(pi, cwd);
 
     if (pr) {
-      updateUi.setStatus(STATUS_KEY, formatStatus(pr));
+      updateUi.setStatus(STATUS_KEY, formatPrStatus(pr));
       startPolling(); // Ensure polling is active while PR exists
     } else {
       updateUi.setStatus(STATUS_KEY, undefined);
