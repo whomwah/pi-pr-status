@@ -35,6 +35,24 @@ const POLL_INTERVAL = 5 * 60_000; // 5 minutes
 const STATUS_KEY = "pr-status";
 const GH_TIMEOUT = 10_000;
 
+// Pre-compiled regex for extracting owner/name from PR URL
+const REPO_REGEX = /github\.com\/([^/]+)\/([^/]+)\/pull\//;
+
+// Sets for O(1) check status lookups instead of chained string comparisons
+const PASS_CONCLUSIONS = new Set(["SUCCESS", "NEUTRAL", "SKIPPED"]);
+const FAIL_CONCLUSIONS = new Set([
+  "FAILURE",
+  "TIMED_OUT",
+  "CANCELLED",
+  "ACTION_REQUIRED",
+]);
+const PENDING_STATUSES = new Set([
+  "IN_PROGRESS",
+  "QUEUED",
+  "PENDING",
+  "WAITING",
+]);
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 /** Check if gh CLI is available and authenticated. */
@@ -68,7 +86,7 @@ async function getBranch(
 }
 
 /** Parse CI check statuses from gh pr view JSON. */
-function parseChecks(statusCheckRollup: unknown[]): CheckStatus {
+export function parsePrChecks(statusCheckRollup: unknown[]): CheckStatus {
   const checks: CheckStatus = { total: 0, pass: 0, fail: 0, pending: 0 };
 
   for (const check of statusCheckRollup) {
@@ -81,25 +99,11 @@ function parseChecks(statusCheckRollup: unknown[]): CheckStatus {
     if (!name && !conclusion && !status) continue;
 
     checks.total++;
-    if (
-      conclusion === "SUCCESS" ||
-      conclusion === "NEUTRAL" ||
-      conclusion === "SKIPPED"
-    ) {
+    if (PASS_CONCLUSIONS.has(conclusion)) {
       checks.pass++;
-    } else if (
-      conclusion === "FAILURE" ||
-      conclusion === "TIMED_OUT" ||
-      conclusion === "CANCELLED" ||
-      conclusion === "ACTION_REQUIRED"
-    ) {
+    } else if (FAIL_CONCLUSIONS.has(conclusion)) {
       checks.fail++;
-    } else if (
-      status === "IN_PROGRESS" ||
-      status === "QUEUED" ||
-      status === "PENDING" ||
-      status === "WAITING"
-    ) {
+    } else if (PENDING_STATUSES.has(status)) {
       checks.pending++;
     } else if (status === "COMPLETED") {
       checks.pass++;
@@ -120,20 +124,21 @@ async function getUnresolvedThreads(
 ): Promise<number> {
   try {
     const query = `{ repository(owner: "${owner}", name: "${name}") { pullRequest(number: ${prNumber}) { reviewThreads(first: 100) { nodes { isResolved } } } } }`;
-    const result = await pi.exec("gh", ["api", "graphql", "-f", `query=${query}`], {
-      timeout: GH_TIMEOUT,
-    });
+    const result = await pi.exec(
+      "gh",
+      ["api", "graphql", "-f", `query=${query}`],
+      {
+        timeout: GH_TIMEOUT,
+      },
+    );
     const code = (result as any).exitCode ?? (result as any).code;
     if (code !== 0) return 0;
 
     const data = JSON.parse(result.stdout);
-    const threads =
-      data?.data?.repository?.pullRequest?.reviewThreads?.nodes;
+    const threads = data?.data?.repository?.pullRequest?.reviewThreads?.nodes;
     if (!Array.isArray(threads)) return 0;
 
-    return threads.filter(
-      (t: { isResolved: boolean }) => !t.isResolved,
-    ).length;
+    return threads.filter((t: { isResolved: boolean }) => !t.isResolved).length;
   } catch {
     return 0;
   }
@@ -157,13 +162,11 @@ async function getPrForBranch(
     if (!pr.number || !pr.url) return undefined;
 
     const checks = Array.isArray(pr.statusCheckRollup)
-      ? parseChecks(pr.statusCheckRollup)
+      ? parsePrChecks(pr.statusCheckRollup)
       : { total: 0, pass: 0, fail: 0, pending: 0 };
 
     // Extract owner/name from PR URL: https://github.com/owner/name/pull/N
-    const repoMatch = pr.url?.match(
-      /github\.com\/([^/]+)\/([^/]+)\/pull\//,
-    );
+    const repoMatch = pr.url?.match(REPO_REGEX);
     let unresolvedThreads = 0;
     if (repoMatch) {
       unresolvedThreads = await getUnresolvedThreads(
@@ -188,7 +191,7 @@ async function getPrForBranch(
 }
 
 /** Format a PR into a compact status string with OSC 8 hyperlink. */
-function formatStatus(pr: PrInfo): string {
+export function formatPrStatus(pr: PrInfo): string {
   const stateIcon =
     pr.state === "MERGED" ? "🟣" : pr.state === "CLOSED" ? "🔴" : "🟢";
 
@@ -251,7 +254,7 @@ export default async function (pi: ExtensionAPI) {
     const pr = await getPrForBranch(pi, cwd);
 
     if (pr) {
-      updateUi.setStatus(STATUS_KEY, formatStatus(pr));
+      updateUi.setStatus(STATUS_KEY, formatPrStatus(pr));
       startPolling(); // Ensure polling is active while PR exists
     } else {
       updateUi.setStatus(STATUS_KEY, undefined);
@@ -260,7 +263,7 @@ export default async function (pi: ExtensionAPI) {
   }
 
   function startPolling() {
-    stopPolling(); // Reset any existing timer
+    if (timer) return; // Already polling
     timer = setInterval(poll, POLL_INTERVAL);
   }
 

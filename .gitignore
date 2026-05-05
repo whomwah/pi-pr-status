@@ -1,18 +1,19 @@
-### macOS
-# Finder metadata
-.DS_Store
+# Dependencies
+node_modules/
 
-# Thumbnails
+# Build output
+dist/
+
+# Test coverage
+coverage/
+
+# macOS
+.DS_Store
 ._*
 
-# Custom folder icons
-Icon
-
-# Volume root files
-.DocumentRevisions-V100
-.fseventsd
-.Spotlight-V100
-.TemporaryItems
-.Trashes
-.VolumeIcon.icns
-.com.apple.timemachine.donotpresent
+# IDE / editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
