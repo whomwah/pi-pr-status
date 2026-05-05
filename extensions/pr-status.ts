@@ -35,6 +35,24 @@ const POLL_INTERVAL = 5 * 60_000; // 5 minutes
 const STATUS_KEY = "pr-status";
 const GH_TIMEOUT = 10_000;
 
+// Pre-compiled regex for extracting owner/name from PR URL
+const REPO_REGEX = /github\.com\/([^/]+)\/([^/]+)\/pull\//;
+
+// Sets for O(1) check status lookups instead of chained string comparisons
+const PASS_CONCLUSIONS = new Set(["SUCCESS", "NEUTRAL", "SKIPPED"]);
+const FAIL_CONCLUSIONS = new Set([
+  "FAILURE",
+  "TIMED_OUT",
+  "CANCELLED",
+  "ACTION_REQUIRED",
+]);
+const PENDING_STATUSES = new Set([
+  "IN_PROGRESS",
+  "QUEUED",
+  "PENDING",
+  "WAITING",
+]);
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 /** Check if gh CLI is available and authenticated. */
@@ -81,25 +99,11 @@ export function parsePrChecks(statusCheckRollup: unknown[]): CheckStatus {
     if (!name && !conclusion && !status) continue;
 
     checks.total++;
-    if (
-      conclusion === "SUCCESS" ||
-      conclusion === "NEUTRAL" ||
-      conclusion === "SKIPPED"
-    ) {
+    if (PASS_CONCLUSIONS.has(conclusion)) {
       checks.pass++;
-    } else if (
-      conclusion === "FAILURE" ||
-      conclusion === "TIMED_OUT" ||
-      conclusion === "CANCELLED" ||
-      conclusion === "ACTION_REQUIRED"
-    ) {
+    } else if (FAIL_CONCLUSIONS.has(conclusion)) {
       checks.fail++;
-    } else if (
-      status === "IN_PROGRESS" ||
-      status === "QUEUED" ||
-      status === "PENDING" ||
-      status === "WAITING"
-    ) {
+    } else if (PENDING_STATUSES.has(status)) {
       checks.pending++;
     } else if (status === "COMPLETED") {
       checks.pass++;
@@ -162,7 +166,7 @@ async function getPrForBranch(
       : { total: 0, pass: 0, fail: 0, pending: 0 };
 
     // Extract owner/name from PR URL: https://github.com/owner/name/pull/N
-    const repoMatch = pr.url?.match(/github\.com\/([^/]+)\/([^/]+)\/pull\//);
+    const repoMatch = pr.url?.match(REPO_REGEX);
     let unresolvedThreads = 0;
     if (repoMatch) {
       unresolvedThreads = await getUnresolvedThreads(
@@ -259,7 +263,7 @@ export default async function (pi: ExtensionAPI) {
   }
 
   function startPolling() {
-    stopPolling(); // Reset any existing timer
+    if (timer) return; // Already polling
     timer = setInterval(poll, POLL_INTERVAL);
   }
 
