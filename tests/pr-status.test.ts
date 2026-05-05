@@ -25,25 +25,33 @@ describe("parsePrChecks", () => {
 
   it("counts SUCCESS as pass", () => {
     expect(
-      parsePrChecks([{ name: "ci", conclusion: "SUCCESS", status: "COMPLETED" }]),
+      parsePrChecks([
+        { name: "ci", conclusion: "SUCCESS", status: "COMPLETED" },
+      ]),
     ).toMatchObject({ total: 1, pass: 1, fail: 0, pending: 0 });
   });
 
   it("counts NEUTRAL as pass", () => {
     expect(
-      parsePrChecks([{ name: "ci", conclusion: "NEUTRAL", status: "COMPLETED" }]),
+      parsePrChecks([
+        { name: "ci", conclusion: "NEUTRAL", status: "COMPLETED" },
+      ]),
     ).toMatchObject({ total: 1, pass: 1 });
   });
 
   it("counts SKIPPED as pass", () => {
     expect(
-      parsePrChecks([{ name: "ci", conclusion: "SKIPPED", status: "COMPLETED" }]),
+      parsePrChecks([
+        { name: "ci", conclusion: "SKIPPED", status: "COMPLETED" },
+      ]),
     ).toMatchObject({ total: 1, pass: 1 });
   });
 
   it("counts FAILURE as fail", () => {
     expect(
-      parsePrChecks([{ name: "ci", conclusion: "FAILURE", status: "COMPLETED" }]),
+      parsePrChecks([
+        { name: "ci", conclusion: "FAILURE", status: "COMPLETED" },
+      ]),
     ).toMatchObject({ total: 1, pass: 0, fail: 1 });
   });
 
