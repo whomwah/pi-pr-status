@@ -68,7 +68,7 @@ async function getBranch(
 }
 
 /** Parse CI check statuses from gh pr view JSON. */
-function parseChecks(statusCheckRollup: unknown[]): CheckStatus {
+export function parseChecks(statusCheckRollup: unknown[]): CheckStatus {
   const checks: CheckStatus = { total: 0, pass: 0, fail: 0, pending: 0 };
 
   for (const check of statusCheckRollup) {
@@ -120,20 +120,21 @@ async function getUnresolvedThreads(
 ): Promise<number> {
   try {
     const query = `{ repository(owner: "${owner}", name: "${name}") { pullRequest(number: ${prNumber}) { reviewThreads(first: 100) { nodes { isResolved } } } } }`;
-    const result = await pi.exec("gh", ["api", "graphql", "-f", `query=${query}`], {
-      timeout: GH_TIMEOUT,
-    });
+    const result = await pi.exec(
+      "gh",
+      ["api", "graphql", "-f", `query=${query}`],
+      {
+        timeout: GH_TIMEOUT,
+      },
+    );
     const code = (result as any).exitCode ?? (result as any).code;
     if (code !== 0) return 0;
 
     const data = JSON.parse(result.stdout);
-    const threads =
-      data?.data?.repository?.pullRequest?.reviewThreads?.nodes;
+    const threads = data?.data?.repository?.pullRequest?.reviewThreads?.nodes;
     if (!Array.isArray(threads)) return 0;
 
-    return threads.filter(
-      (t: { isResolved: boolean }) => !t.isResolved,
-    ).length;
+    return threads.filter((t: { isResolved: boolean }) => !t.isResolved).length;
   } catch {
     return 0;
   }
@@ -161,9 +162,7 @@ async function getPrForBranch(
       : { total: 0, pass: 0, fail: 0, pending: 0 };
 
     // Extract owner/name from PR URL: https://github.com/owner/name/pull/N
-    const repoMatch = pr.url?.match(
-      /github\.com\/([^/]+)\/([^/]+)\/pull\//,
-    );
+    const repoMatch = pr.url?.match(/github\.com\/([^/]+)\/([^/]+)\/pull\//);
     let unresolvedThreads = 0;
     if (repoMatch) {
       unresolvedThreads = await getUnresolvedThreads(
@@ -188,7 +187,7 @@ async function getPrForBranch(
 }
 
 /** Format a PR into a compact status string with OSC 8 hyperlink. */
-function formatStatus(pr: PrInfo): string {
+export function formatStatus(pr: PrInfo): string {
   const stateIcon =
     pr.state === "MERGED" ? "🟣" : pr.state === "CLOSED" ? "🔴" : "🟢";
 
