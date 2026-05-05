@@ -12,13 +12,11 @@ When you're on a branch with an open PR, the status bar shows the PR number (cli
 
 ```bash
 pi package install ./pi-pr-status
+pi install git:git@github.com:whomwah/pi-pr-status@v0.1.0
 ```
 
 ## Development
 
 ```bash
 just        # list available tasks
-just test   # run tests
-just check  # format check
-just fix    # auto-format
 ```
