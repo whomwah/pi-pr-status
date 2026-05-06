@@ -196,8 +196,8 @@ export function formatPrStatus(pr: PrInfo): string {
   const stateIcon =
     pr.state === "MERGED" ? "🟣" : pr.state === "CLOSED" ? "🔴" : "🟢";
 
-  // OSC 8 hyperlink around the PR number
-  const linkedPr = `\x1b]8;;${pr.url}\x1b\\PR #${pr.number}\x1b]8;;\x1b\\`;
+  // OSC 8 hyperlink around the PR number, underlined for visibility
+  const linkedPr = `\x1b]8;;${pr.url}\x1b\\\x1b[4mPR #${pr.number}\x1b[24m\x1b]8;;\x1b\\`;
   const parts: string[] = [`${stateIcon} ${linkedPr}`];
 
   // CI status
