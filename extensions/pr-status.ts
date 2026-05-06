@@ -2,8 +2,9 @@
  * PR Status Extension
  *
  * Shows the current PR status in the footer status bar via setStatus("pr-status", ...).
- * Async, non-blocking — uses pi.exec(). Polls every 5 minutes when a PR exists;
- * stops polling when no PR is found on the current branch.
+ * Async, non-blocking — uses pi.exec(). Polls every 5 minutes while on a named
+ * branch; stops only when not on a branch (detached HEAD). Polling continues even
+ * when no PR exists so newly created PRs are detected without restarting pi.
  *
  * Requires `gh` CLI authenticated with `gh auth login`.
  * Silent no-op if `gh` is unavailable or unauthenticated.
@@ -255,10 +256,8 @@ export default async function (pi: ExtensionAPI) {
 
     if (pr) {
       updateUi.setStatus(STATUS_KEY, formatPrStatus(pr));
-      startPolling(); // Ensure polling is active while PR exists
     } else {
       updateUi.setStatus(STATUS_KEY, undefined);
-      stopPolling(); // No PR on this branch, stop polling
     }
   }
 
@@ -278,7 +277,9 @@ export default async function (pi: ExtensionAPI) {
     cwd = ctx.cwd;
     updateUi = ctx.ui;
 
-    // Initial poll
+    // Start polling and run initial poll.
+    // Polling continues even when no PR exists, so newly created PRs are detected.
+    startPolling();
     await poll();
   });
 
