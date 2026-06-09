@@ -283,6 +283,19 @@ export default async function (pi: ExtensionAPI) {
     await poll();
   });
 
+  pi.on("tool_result", async (event, _ctx) => {
+    // Trigger an immediate re-poll when gh pr create succeeds
+    if (
+      event.toolName === "bash" &&
+      !event.isError &&
+      event.input?.command &&
+      /\bgh\s+pr\s+create\b/.test(event.input.command)
+    ) {
+      // Small delay to let GitHub API propagate the PR
+      setTimeout(() => poll(), 2_000);
+    }
+  });
+
   pi.on("session_shutdown", () => {
     stopPolling();
     cwd = undefined;
